@@ -1,0 +1,111 @@
+/*
+ * Copyright (C) 2011 ~ 2018 Deepin Technology Co., Ltd.
+ *
+ * Author:     sbw <sbw@sbw.so>
+ *
+ * Maintainer: sbw <sbw@sbw.so>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#ifndef APPSNAPSHOT_H
+#define APPSNAPSHOT_H
+
+#include <QWidget>
+#include <QDebug>
+#include <QTimer>
+
+#include <DIconButton>
+#include <DWindowManagerHelper>
+
+#include <com_deepin_dde_daemon_dock.h>
+#include <com_deepin_dde_daemon_dock_entry.h>
+
+DWIDGET_USE_NAMESPACE
+DGUI_USE_NAMESPACE
+
+#define SNAP_WIDTH       200
+#define SNAP_HEIGHT      130
+
+#define SNAP_CLOSE_BTN_WIDTH     (24)
+#define SNAP_CLOSE_BTN_MARGIN    (5)
+
+struct SHMInfo;
+struct _XImage;
+typedef _XImage XImage;
+
+using DockDaemonInter = com::deepin::dde::daemon::Dock;
+
+namespace Dock {
+class TipsWidget;
+}
+
+class AppSnapshot : public QWidget
+{
+    Q_OBJECT
+
+public:
+    explicit AppSnapshot(const WId wid, QWidget *parent = 0);
+
+    inline WId wid() const { return m_wid; }
+    inline bool attentioned() const { return m_windowInfo.attention; }
+    inline bool closeAble() const { return m_closeAble; }
+    inline void setCloseAble(const bool value) { m_closeAble = value; }
+    inline const QImage snapshot() const { return m_snapshot; }
+    inline const QRectF snapshotGeometry() const { return m_snapshotSrcRect; }
+    inline const QString title() const { return m_windowInfo.title; }
+    void setWindowState();
+
+signals:
+    void entered(const WId wid) const;
+    void clicked(const WId wid) const;
+    void requestCheckWindow() const;
+    void requestCloseAppSnapshot() const;
+
+public slots:
+    void fetchSnapshot();
+    void closeWindow() const;
+    void compositeChanged() const;
+    void setWindowInfo(const WindowInfo &info);
+
+private:
+    void dragEnterEvent(QDragEnterEvent *e) override;
+    void enterEvent(QEvent *e) override;
+    void leaveEvent(QEvent *e) override;
+    void paintEvent(QPaintEvent *e) override;
+    void resizeEvent(QResizeEvent *e) override;
+    void mousePressEvent(QMouseEvent *e) override;
+    bool eventFilter(QObject *watched, QEvent *e) override;
+    SHMInfo *getImageDSHM();
+    XImage *getImageXlib();
+    QRect rectRemovedShadow(const QImage &qimage, unsigned char *prop_to_return_gtk);
+    void getWindowState();
+
+private:
+    const WId m_wid;
+    WindowInfo m_windowInfo;
+
+    bool m_closeAble;
+    bool m_isWidowHidden;
+    QImage m_snapshot;
+    QRectF m_snapshotSrcRect;
+
+    Dock::TipsWidget *m_title;
+    QTimer *m_waitLeaveTimer;
+    DIconButton *m_closeBtn2D;
+    DWindowManagerHelper *m_wmHelper;
+    DockDaemonInter *m_dockDaemonInter;
+};
+
+#endif // APPSNAPSHOT_H
